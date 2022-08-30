@@ -1,7 +1,14 @@
 #include <gtest/gtest.h>
 
+#include <thread>
+
 #include "my_shared_ptr.h"
 #include "my_unique_ptr.h"
+
+void thread_content(my_shared_ptr<int>& ptr) {
+  my_shared_ptr<int> ptr1(ptr);
+  ASSERT_EQ(ptr1.use_count(), 2);
+}
 
 TEST(test_get, my_shared_ptr) {
   my_shared_ptr<int> ptr(new int(1));
@@ -50,6 +57,15 @@ TEST(test_observer, my_shared_ptr) {
   my_shared_ptr<new_int> ptr(new new_int(1));
   ASSERT_EQ((*ptr).val, 1);
   ASSERT_EQ(ptr->val, 1);
+}
+
+// Multithreaded read is safe, but once it gets to the raw pointer the
+// shared_ptr stores, it becomes dangerous.
+TEST(test_multi_thread, my_shared_ptr) {
+  my_shared_ptr<int> ptr(new int(1));
+  std::thread t(thread_content, std::ref(ptr));
+  t.join();
+  ASSERT_EQ(ptr.use_count(), 1);
 }
 
 TEST(test_constructor, my_unique_ptr) {
